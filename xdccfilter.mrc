@@ -11,8 +11,8 @@
 on ^*:text:*:#nibl:{
   if ($nick ishop $chan) {
     haltdef
-    var %w = @XDCCadv
-    if (!$window(@XDCCadv)) { window -e %w }
+    var %w = @NIBL-XDCC
+    if (!$window(@NIBL-XDCC)) { window -e %w }
     aline %w $timestamp > $chan - $nick : $1-
   }
 }
