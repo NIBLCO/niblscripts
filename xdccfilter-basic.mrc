@@ -7,7 +7,7 @@
 ;        
 ; Displays #NIBL XDCC announcements in a separate query tab.
 ; Like the advanced version, this also includes a "GETIT" function, which will download the file when you
-; double click on the bots announce message (the /msg Botname XDCC SEND #)
+; double click on the [GETIT] highlighted just after the bots announce message ( /msg Botname XDCC SEND # [GETIT])
 
 on ^*:text:*:#nibl:{
   if ($nick ishop $chan) {
