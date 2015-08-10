@@ -1,7 +1,7 @@
 # By Flintlock for NIBL
 __module_name__ = "NIBL XDCC Filter"
 __module_version__ = "1.0"
-__module_description__ = "Displays #NIBL XDCC announcements in a separate tab"
+__module_description__ = "Displays #NIBL XDCC announcements in a separate tab."
 
 import hexchat
 
