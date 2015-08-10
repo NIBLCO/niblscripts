@@ -4,7 +4,7 @@
 ; Created by:      Rand (#NIBL @ Rizon)
 ;
 ; Usage: Place into mIRC script folder (Should be C:\Users\username\AppData\Roaming\mIRC\scripts
-;        /load -rs scripts\XDCCadv.mrc
+;        /load -rs scripts\xdccfilter.mrc
 ;        
 ; Displays #NIBL XDCC announcements in a separate query tab.
 
