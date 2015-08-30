@@ -1,4 +1,4 @@
-; XDCC Announcement Filter - v2
+; XDCC Announcement Filter - v2.01
 ;
 ; Type /xdcca to bring up the XDCC Announcement window.
 ; This will intercept announcements.
@@ -12,17 +12,23 @@
 ; NOTE, the following ONLY applies if you already have a "theme" script:
 ; 
 ; *   If this is the case, look for the event "on ^*:text:"
-; *   You'll need to add something like this:
+; *   You'll need to add something like this (between the --- lines):
 ; *   ---------------------------------------
-; *         if ($window(@xdcca)) {
-; *           if ($network == Rizon && $nick ishop $chan) {
-; *             haltdef | return
-; *           }
+; *       var %networks = Rizon , %nicks = ahobot ReleaseBitch
+; *       if ($window(@xdcca) && $istok(%networks,$network,32)) {
+; *         if ($nick ishop $chan || $istok(%nicks,$nick,32)) {
+; *           haltdef | return
 ; *         }
+; *       }
 ; *   ----------------------------------------
 ; *   This will need to go inside of your on text event,
 ; *   towards the top. 
 
+
+; If you don't want this to automatically open your XDCCA window, 
+; comment the following line out:
+
+on *:start:{ xdcca }
 
 ; Command to create the XDCC Announce window.
 ; You can tweak the position.x and y, along with the width and height
@@ -41,7 +47,13 @@ alias xdcca {
 
   var %xywh = %position.x %position.y $calc(%width - 130) 50
 
-  window -adof -t32,64,120 +dL @xdcca %xywh
+  ; We only want the XDCCA window to appear if we're in a channel.
+  if (#* iswm $active) { var %switches = -dofa }
+  else { var %switches = -dfh }
+
+  window %switches -t32,64,120 +dL @xdcca %xywh
+
+
 }
 
 
@@ -51,7 +63,6 @@ alias xdcca {
 
 alias _specialmsg {
   var %chan = $1 , %nick = $2 , %msg = $3-
-  var %l = $len($timestamp .. %nick) , %l2 = %l + 5
   var %pre = $iif($_prefix(%chan,%nick),09 $+ $v1)
   if ($2 == $me) { var %nick = $+(%pre,10,$me,: ) }
   else { var %nick = $+(%pre,4,$2,: ) }
@@ -67,10 +78,9 @@ alias -l _prefix { return $iif($left($nick($1,$2).pnick,1) isin $prefix,$v1,$nul
 ; On text event to redirect bot messages to the @xdcca window - but only if it's open.
 
 on ^*:text:*:#:{
-  var %w = @xdcca , %text = $1-
-  if ($window(%w)) {
-    var %networks = Rizon
-    if ($istok(%networks,$network,32) && $nick ishop $chan) {
+  var %networks = Rizon , %nicks = ahobot ReleaseBitch , %text = $1- , %w = @xdcca
+  if ($window(%w) && $istok(%networks,$network,32)) {
+    if ($nick ishop $chan || $istok(%nicks,$nick,32)) {
       var %text = $regsubex(xdccanc,%text,/(\/?msg \S+ xdcc send #?\d+)/ig,\t 7[GETIT])
       _specialmsg @xdcca $nick %text
       haltdef
