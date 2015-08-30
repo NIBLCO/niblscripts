@@ -1,4 +1,4 @@
-; XDCC Announcement Filter - v2.01
+; XDCC Announcement Filter - v2.01.9
 ;
 ; Type /xdcca to bring up the XDCC Announcement window.
 ; This will intercept announcements.
