@@ -1,6 +1,17 @@
-# By Flintlock for NIBL
+#
+# Script Name:     XDCC-Filter (v1.3)
+# Created by:      Flintlock (#NIBL @ Rizon)
+# Contributions:   Ultrabenosaurus (Toggle)
+#
+# NOTES: 
+# This script works on all version of HexChat and runs on both Python 2 and 3, but if you're using Python 3 you may encounter an error
+# but it's simple to fix. You'll need to edit lines 00 and 00 to look like the following, all you're doing is 
+# placing NIBL XDCC Filter inbetween parentheses ()
+#    print ("NIBL XDCC Filter activated")
+#    print ("NIBL XDCC Filter deactivated")
+#
 __module_name__ = "NIBL XDCC Filter"
-__module_version__ = "1.2"
+__module_version__ = "1.3"
 __module_description__ = "Displays #NIBL XDCC announcements in a separate tab."
 
 import hexchat, platform, os
