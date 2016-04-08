@@ -177,6 +177,7 @@ alias -l _getPack {
 }
 
 on *:getfail:*:{
+  if (!$_nibl.bot.file.retry) return
   var %n = niblget , %f = $nopath($filename) , %nickwm = $nick $+ .*
   if ($hfind(%n,%f,1).data != $null) {
     var %np = $v1
