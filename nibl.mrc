@@ -7,11 +7,14 @@
 ; Examples: Search for all packs on a bot:   /nibl -b bot
 ;           Use search term on all bots:     /nibl some show
 ;           Use search term on specific bot: /nibl -b bot some show
+;           To cancel an auto-retry attempt: /cancelget Botname.#PackNumber
 ;            
 ; Creator:  Rand (@Rizon)
-; Version:  0.2
+; Version:  0.3
 ;        
 ;         Changelog:
+;           0.3 - Added a "Retry" option - for incomplete downloads.  On by default.
+;                 You can /cancelget Botname.#PackNumber, to cancel a specific retry attempt.
 ;           0.2 - Added a "Trust" bot option - auto accepts downloads from bots.
 ;           0.1 - Initial release.
 
@@ -65,7 +68,10 @@ alias -l _nibl.bot.name.seperator { return 0 }
 
 alias -l _add.bot.to.trusted { return 1 }
 
+; If your download is incomplete, re-request the file from the bot.
+;    Default option for this is 1, "on."  You can set this to 0 to disable.
 
+alias -l _nibl.bot.file.retry { return 1 }
 
 ;
 ; Don't change anything below here unless you know what you're doing!
@@ -161,12 +167,40 @@ on *:hotlink:[NIBLGET]:@nibl:{
 }
 
 alias -l _getPack {
-  var %nick = $1 , %pack = $2 , %file = $3-
+  var %nick = $1 , %pack = $2 , %file = $3- , %np = $+(%nick,.,%pack)
   if ($_add.bot.to.trusted == 1) {
     .dcc trust $address(%nick,3)
   }
   echo -a 4> 5Fetching:4 %file     5From:4 %nick     5Pack:04 %pack
   .msg %nick xdcc send %pack
+  hadd -m niblget %np %file
 }
 
+on *:getfail:*:{
+  var %n = niblget , %f = $nopath($filename) , %nickwm = $nick $+ .*
+  if ($hfind(%n,%f,1).data != $null) {
+    var %np = $v1
+    if (%nickwm iswm %np) {
+      if ($regex(%np,/^(.+?)\.(#.+?)$/)) {
+        echo -s Failure to get file from $regml(1), and requesting the file (pack $regml(2) ) again in 15 seconds.
+        echo -s To cancel this, copy and paste this command (within 15 seconds): /cancelget %np
+        .timer. $+ %np 1 15 msg $regml(1) xdcc get $regml(2) 
+      }
+    }
+  }
+}
+alias cancelget {
+  .timer. $+ $1 off
+  hdel niblget $1
+  echo -a Cancelled retries for $1
+}
+on *:filercvd:*:{
+  var %n = niblget , %f = $nopath($filename) , %nickwm = $nick $+ .*
+  if ($hfind(%n,%f,1).data != $null) {
+    var %np = $v1
+    if (%nickwm iswm %np) {
+      echo -s File recieved.  Removing %np from the watch list.
+    }
+  }
+}
 alias stripFluff { return $regsubex($1-,/\.|-|_/g,$chr(32)) }
