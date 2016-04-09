@@ -166,6 +166,7 @@ on *:hotlink:[NIBLGET]:@nibl:{
   _getPack %nick %pack %file
 }
 on ^*:hotlink:[CANCELGET]:*:{
+  if ($strip($gettok($hotline,1,32)) != [CANCELGET]) halt
   if ($strip($1) == [CANCELGET]) return
   halt
 }
