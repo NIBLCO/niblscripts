@@ -69,6 +69,12 @@ alias -l _nibl.bot.name.seperator { return 0 }
 alias -l _add.bot.to.trusted { return 1 }
 
 ; If your download is incomplete, re-request the file from the bot.
+;    Note: You must enable mIRC's "auto resume" feature.
+;       Alt+O > DCC > [x] Auto-get file and [x] Minimize
+;       Alt+O > DCC > If file exists [Resume]
+;       Alt+O > DCC > [Trusted] > [x] Limit auto-get to trusted users.
+;       Alt+O > DCC > [Trusted] > [x] Show get dialog for non-trusted users.
+;
 ;    Default option for this is 1, "on."  You can set this to 0 to disable.
 
 alias -l _nibl.bot.file.retry { return 1 }
