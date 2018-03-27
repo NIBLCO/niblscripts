@@ -2,175 +2,264 @@
 ; This script pulls it's information from NIBL's website.
 ;           
 ;
-; Usage:    /nibl [-b botname] [search terms]
+; Usage:    /nibl [search terms]
 ;           
-; Examples: Search for all packs on a bot:   /nibl -b bot
-;           Use search term on all bots:     /nibl some show
-;           Use search term on specific bot: /nibl -b bot some show
-;           To cancel an auto-retry attempt: /cancelget Botname.#PackNumber
+; Examples: Open the NIBL Search dialog:        /nibl
+;           Opens dialog and sets search text:  /nibl some show
+;           To cancel an auto-retry attempt:    /cancelget Botname.#PackNumber
 ;            
-; Creator:  Rand (@Rizon)
-; Version:  0.3
+; Creator:  Hanzo (@Rizon)  /  Rand (@DALnet)  /  Rand#0001 (@Discord)
+; Version:  1.0
+;
+; Requires: The below are already included, but I'm listing them as these were not made by me.  
+;           See note below as to why I'm including them.
+;
+;           JSON For mIRC.    (We use this to grab the JSON and return the results.)
+;           GitHub location: https://github.com/SReject/JSON-For-Mirc 
+;           Download Link as of 23rd March 2018:  https://github.com/SReject/JSON-For-Mirc/releases/download/v1.0.4000/JSONFormIRC-v1.0.4000.mrc
+;
+;           MDX.              (We use this to change our List control into a ListView control, for columns.)
+;           Download Link as of 27th March 2018:  http://westor.ucoz.com/load/mirc_dlls/mdx/2-1-0-5
+;           
+;           - I have included a copy of these with this script, IRC is dying off and scripts/dlls are starting
+;             to disappear.  Normally I prefer to let people get the required scripts themselves, but 
+;             will be including them for this and any future mIRC Scripts that I make.
+;
+;
 ;        
 ;         Changelog:
+;           1.0 - Switched over from using sockets to SReject's JSON for mIRC script.
+;                 Created a dialog, now you can use a simple interface for searching.
+;                 This required doing a rewrite for the majority of the code.
+;
+;           -.- - Skipped a bunch of versions, due to a large redesign.
+;                 
 ;           0.3 - Added a "Retry" option - for incomplete downloads.  On by default.
 ;                 You can /cancelget Botname.#PackNumber, to cancel a specific retry attempt.
-;           0.2 - Added a "Trust" bot option - auto accepts downloads from bots.
+;           0.2 - Added a "Trust" bot option - auto accepts downloads only from bots you
+;                 requested a file from.
 ;           0.1 - Initial release.
-
-
-; Quick Customization Section!
 ;
-; Alternating Colors:
-;     The two lines below control the 'alternating colors' of the text.
-;     In my client 0 is white and 14 is a darker gray.
-;     Change these two numbers to fit your needs.
-
-alias -l _nibl.color.main { return 0 }
-alias -l _nibl.color.alt { return 14 }
-
-; Headers:
-;    _nibl.headers.repeat
-;      Controls how often you see
-;      "Bot  Pack  Size  File" repeated.
-;      0 = Disabled.   1 = Every other line.
-;      2 = Every 2 lines.  so on and so forth.
-;      Default is 10.
-;    _nibl.headers.visible
-;      Set to 0 to disable.
-;      Set to 1 to always display repeat headers.
-;      Set to 2 to only display repeat headers when searching a specific bot.
-;      Default is 2 - so that it only shows when searching a specific bot. ie /nibl -b bot search.
-
-alias -l _nibl.headers.repeat { return 0 }
-alias -l _nibl.headers.visible { return 0 }
+;         TO-DO:
+;           + Add functionality to < and > buttons once the API is updated!
 
 
-; Bot name seperator:
-;    This controls whether or not there will
-;    be a seperator when moving on to the next bot.
-;    1 for on, 0 for off. Default is 1.
+;  The Command to open the dialog.
+alias nibl { 
+  set %niblget.dialog.search $1- 
+  dialog -m niblget niblget
+}
 
-alias -l _nibl.bot.name.seperator { return 0 }
-
-; Automatically "TRUST" the bots that you try to download from!
-;    This will allow you to automatically add a bot to your 'trusted' list.
-;    It will accept the file sends from the bots automatically.
-;    Default option for this is 1, "on".  You can set this to 0 to disable.
-;    ... If you want this feature to work:
-;    Press ALT + O, Select "DCC"
-;    Set "On Send request:" to:
-;       [x] Auto-get file and [x] minize
-;       If file exists:
-;          [Resume]  [Trusted]
-;
-;    Set these options if you want
-
-alias -l _add.bot.to.trusted { return 1 }
-
-; If your download is incomplete, re-request the file from the bot.
-;    Note: You must enable mIRC's "auto resume" feature.
-;       Alt+O > DCC > [x] Auto-get file and [x] Minimize
-;       Alt+O > DCC > If file exists [Resume]
-;       Alt+O > DCC > [Trusted] > [x] Limit auto-get to trusted users.
-;       Alt+O > DCC > [Trusted] > [x] Show get dialog for non-trusted users.
-;
-;    Default option for this is 1, "on."  You can set this to 0 to disable.
-
-alias -l _nibl.bot.file.retry { return 1 }
-
-;
-; Don't change anything below here unless you know what you're doing!
-; --------------------------------------------------------------------
-;
-
-
-alias nibl {
-  var %n = nibl
-  if ($sock(%n)) return
-
-  if ($$1 == -b) { var %botname = $$2 , %search = $3- }
-  else { var %botname = 0, %search = $$1- }
-
-  sockopen -e %n nibl.co.uk 443
-  sockmark %n %botname %search
-  if (!$window(@nibl)) { window -aeh -t14,44,58,67,75 @nibl }
-  echo -act notice * Loading NIBL results for your search: $iif($1 == -b,$+([,%botname,])) %search
-  window -h @nibl
-  clear @nibl
-  aline @nibl 4>5 Searching $iif($1 == -b, bot: 7 $+ %botname) $iif(%search,5for:7 %search)
+;  The Dialog.
+dialog niblget {
+  title "NIBL Search (v1.0)"
+  size -1 -1 812 452
+  option pixels
+  box "Results:", 1, 4 64 800 351
+  list 2, 16 85 775 292, size extsel
+  button "Close", 3, 700 419 104 25
+  box "Search:", 4, 4 4 800 56
+  combo 5, 492 26 189 234, drop
+  text "Search:", 6, 16 28 42 17
+  edit "", 7, 62 26 250 20
+  text "Bot:", 8, 462 28 26 17
+  button "Get File", 9, 355 380 97 25
+  button "Refresh Bot List", 10, 685 24 104 25
+  button "Search", 11, 314 24 105 25, default
+  check "Trust Bots", 12, 5 423 74 17
+  check "Retry DL if incomplete.", 13, 81 423 136 17
+  text "", 14, 227 425 342 17
+  button "<", 15, 16 379 65 25
+  button ">", 16, 726 379 65 25
 }
 
 
 
-on *:sockopen:nibl:{
-  tokenize 32 $sock(nibl).mark
-  var %s = sockwrite -n $sockname
-  var %botname = $1 , %search = $regsubex($2-,/([^A-Za-z0-9])/g,% $+ $base($asc(\t),10,16))
+;
+; Initializing the dialog.
+;
+on *:dialog:niblget:init:*: {
+  ; MDX Shenanigans so we can have a "ListView" control. (turns List into ListView).
+  mdxinit
+  mdx SetControlMDX $dname 2 ListView report rowselect grid > $mdx_views
+  ;mdx SetColor $dname 2 background $rgb(100,200,75)
+  did -i $dname 2 1 headerdims 125 500 80 50
+  did -i $dname 2 1 headertext Bot Name $chr(9) File $chr(9) Pack $chr(9) Size
+  ; Checkmark heckmark the checkboxes if required.
+  did -a niblget 5 All
+  did -a niblget 5 Latest Packs
+  if (%niblget.dialog.trust) {
+    did -c $dname 12
+  }
+  if (%niblget.dialog.retry) {
+    did -c $dname 13
+  }
+  ; Use the JSON For mIRC script to pull the bots.
+  jsonopen -du nibl https://api.nibl.co.uk:8080/nibl/bots
+  noop $jsonforeach($json(nibl,content), _addBotsToNIBLGET)
+  did -c $dname 5 1
+  did -f $dname 7
 
-  if (%botname == 0) {
-    %s GET /bots.php?search= $+ %search HTTP/1.0
+  did -a $dname 7 %niblget.dialog.search
+}
+
+
+;
+; JSON ForEach Loop aliases.
+; These get triggered by $jsonforeach
+; and populate the Dialog's "ListView" control with files, and drop down with bot names.
+;
+alias _addBotsToNIBLGET {
+  did -a niblget 5 $json($1-,name).value
+  hadd -m niblBotList $json($1-,id).value $json($1-,name).value
+}
+alias _addFilesToNIBLGET {
+  did -a niblget 2 $hget(niblBotList,$json($1-,botId).value) $chr(9) $json($1-,name).value $chr(9) $chr(35) $+ $json($1-,number).value $chr(9) $+([,$json($1-,size).value,])
+}
+
+
+;
+; Click Search button.
+;
+on *:dialog:niblget:sclick:11: {
+  var %ctime = $ctime
+  did -r niblget 2
+  ;14 original id
+  did -a $dname 1 "Searching..."
+  ; Check to see if we are searching for the Latest Packs, or if it's a normal search.
+  if ($did($dname,5) == Latest Packs) {
+    jsonopen -du test https://api.nibl.co.uk:8080/nibl/latest?size=50
+    noop $jsonforeach($json(test,content), _addFilesToNIBLGET)
   }
   else {
-    %s GET /bots.php?bot= $+ %botname $+ &search= $+ %search HTTP/1.0
+    var %search = $regsubex($did(niblget,7),/([^A-Za-z0-9])/g,% $+ $base($asc(\t),10,16))
+    var %botid
+    if ($did($dname,5) != All && $did($dname,5) != Latest) {
+      var %botid = / $+ $hfind(niblBotList,$did($dname,5)).data
+    }
+    jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ ?query= $+ %search $+ &episodeNumber=-1
+    noop $jsonforeach($json(test,content), _addFilesToNIBLGET)
   }
-  %s Host: nibl.co.uk:443
-  %s
+  did -a $dname 1 $calc($did($dname,2).lines - 1)) Results in: $duration($calc($ctime - %ctime)) -- Page: 1 / 1 --
 }
 
-on *:sockread:nibl:{
-  var %botcheck = $gettok($sock(nibl).mark,1,32)
-  if ($sockerr) return
-  sockread %s
-  while ($sockbr) {
-    if ($regex(%s,/<tr class=\"botlistitem.*?\" botname=\"(.+?)\" botpack=\"(.+?)\"/)) {
-      set %nibl.bot $regml(1)
-      set %nibl.pack $regml(2)
-    }
-    if ($regex(%s,/<td class=\"filesize\">(.+?)<\/td>/)) {
-      set %nibl.size $regml(1)
-    }
-    if ($regex(%s,/<td class=\"filename\">(.+)/)) {
-      set %nibl.name $regml(1)
-      if ($_nibl.bot.name.seperator) {
-        if (%nibllastbot != %nibl.bot) {
-          aline @nibl 
-          aline @nibl 7 $chr(9) Bot $chr(9) Pack $chr(9) Size $chr(9) File
-          aline @nibl 9 $chr(9) %nibl.bot
-          unset %niblcount
-        }
-      }
-      inc %niblcount
 
-      aline @nibl 4[NIBLGET]  $+ $iif(2 // %niblcount,$_nibl.color.alt,$_nibl.color.main) $chr(9) %nibl.bot $chr(9) $(#,0) $+ %nibl.pack $chr(9) %nibl.size $chr(9) %nibl.name
-      if ($_nibl.headers.visible == 1 || ($_nibl.headers.visible == 2 && %botcheck != 0)) {
-        if ($_nibl.headers.repeat // %niblcount) {
-          aline @nibl 7 $chr(9) Bot $chr(9) Pack $chr(9) Size $chr(9) File
-        }
-      }
-      set %nibllastbot %nibl.bot
-      unset %nibl.*
-    }
-    sockread %s
+
+on *:dialog:niblget:sclick:12: {
+  set %niblget.dialog.trust $did($dname,12).state
+}
+on *:dialog:niblget:sclick:13: {
+  set %niblget.dialog.retry $did($dname,13).state
+}
+
+on *:dialog:niblget:sclick:5: {
+  var %t = $did($dname,5)
+  if (%t == Latest Packs) {
+    did -r $dname 7
+    did -b $dname 7
+  }
+  else {
+    did -e $dname 7
   }
 }
 
-on *:sockclose:nibl:{
-  window -aew3 @nibl
-  unset %nibl*
+; Click Close
+on *:dialog:niblget:sclick:3: {
+  dialog -x $dname
 }
 
-on ^*:hotlink:[NIBLGET]:@nibl:{
-  if ($strip($1) == [NIBLGET]) return
-  halt
+
+; Download Files
+on *:dialog:niblget:sclick:9: {
+
+  if ($network != Rizon) {
+    did -a $dname 14 ERROR:  Make sure your active Network is Rizon and try again.
+    return
+  }
+
+  var %i = $did($dname,2,0).sel
+  while (%i) {
+    var %t = $did($dname,2,$did($dname,2,%i).sel)
+    if ($regex(%t,/\s\+f?s 0 0 0(.+?)(?=\s\+f?s 0 0 0|$)/g)) {
+      .timer 1 $calc(%i * 5) _getpack $regml(1) $regml(3) $regml(2)
+    }
+    dec %i
+  }
 }
-on *:hotlink:[NIBLGET]:@nibl:{
-  tokenize 32 $replace($hotline,$chr(9),$chr(32))
-  var %nick = $3 , %pack = $4 , %file = $6-
-  if (#nibl !ischan) { echo -a *** Error:  Try joining #NIBL first! Rizon network. | return }
-  if (%nick !ison #nibl && %nick !ison #horriblesubs) { echo -a *** Error:  Silly bastard!  The bot $qt(%nick) isn't even on #NIBL! (network : $network - current) | return }
-  _getPack %nick %pack %file
+
+
+
+
+;  Directory locations, mostly for MDX related stuff.
+alias nibldir { return $scriptdir }
+alias mdx_fulldir { return $+($nibldir,includedRequirements\mdxstudio\) }
+alias mdx_fullpath { return $+(",$nibldir,includedRequirements\mdxstudio\mdx.dll,") }
+alias mdx_views { return $+($mdx_fulldir,views.mdx) }
+alias mdx_bars { return $+($mdx_fulldir,bars.mdx) }
+alias mdx_ctl_gen { return $+($mdx_fulldir,ctl_gen.mdx) }
+alias mdx_dialog { return $+($mdx_fulldir,dialog.mdx) }
+
+alias mdx { dll $mdx_fullpath $1- }
+
+alias mdxinit {
+  dll $mdx_fullpath SetMircVersion $version
+  dll $mdx_fullpath MarkDialog $dname
 }
+
+; Get a pack from a bot.
+; /_getPack nickname packnumber filehere
+alias _getPack {
+  var %nick = $1 , %pack = $2 , %file = $3- , %np = $+(%nick,.,%pack)
+  if (%niblget.dialog.trust) {
+    .dcc trust $address(%nick,3)
+  }
+  echo -s 4> 5Fetching:4 %file     5From:4 %nick     5Pack:04 %pack
+  .msg %nick xdcc send %pack
+  hadd -m niblget %np %file
+}
+
+
+; If the pack fails to download, then try to requeue it.
+on *:getfail:*:{
+  if (!%niblget.dialog.retry) return
+  var %n = niblget , %f = $nopath($filename) , %nickwm = $nick $+ .*
+  if ($hfind(%n,%f,1).data != $null) {
+    var %np = $v1
+    if (%nickwm iswm %np) {
+      if ($regex(%np,/^(.+?)\.(#.+?)$/)) {
+        echo -s Failure to get file from $regml(1), and requesting the file (pack $regml(2) ) again in 15 seconds.
+        echo -s To cancel this, double click the word "CANCELGET" in the line below. Or type: /cancelget %np
+        echo -sa 4[CANCELGET]7 %np 5-7 %f     5(auto retry in 15sec)
+        beep 1
+        .timer. $+ %np 1 15 msg $regml(1) xdcc get $regml(2) 
+      }
+    }
+  }
+}
+
+
+; Cancel the file get
+alias cancelget {
+  .timer. $+ $1 off
+  hdel niblget $1
+  echo -a Cancelled retries for $1
+}
+
+
+; Remove the file after completing the download.
+on *:filercvd:*:{
+  var %n = niblget , %f = $nopath($filename) , %nickwm = $nick $+ .*
+  if ($hfind(%n,%f,1).data != $null) {
+    var %np = $v1
+    if (%nickwm iswm %np) {
+      echo -s File recieved.  Removing %np from the watch list.
+      hdel niblget %np
+    }
+  }
+}
+alias stripFluff { return $regsubex($1-,/\.|-|_/g,$chr(32)) }
+
+; Hotlinks to cancel the auto-retry.
 on ^*:hotlink:[CANCELGET]:*:{
   if ($strip($gettok($hotline,1,32)) != [CANCELGET]) halt
   if ($strip($1) == [CANCELGET]) return
@@ -187,46 +276,3 @@ on *:hotlink:[CANCELGET]:*:{
     echo -a 4> 5No auto-retry set for:07 $2
   }
 }
-
-alias -l _getPack {
-  var %nick = $1 , %pack = $2 , %file = $3- , %np = $+(%nick,.,%pack)
-  if ($_add.bot.to.trusted == 1) {
-    .dcc trust $address(%nick,3)
-  }
-  echo -a 4> 5Fetching:4 %file     5From:4 %nick     5Pack:04 %pack
-  .msg %nick xdcc send %pack
-  hadd -m niblget %np %file
-}
-
-on *:getfail:*:{
-  if (!$_nibl.bot.file.retry) return
-  var %n = niblget , %f = $nopath($filename) , %nickwm = $nick $+ .*
-  if ($hfind(%n,%f,1).data != $null) {
-    var %np = $v1
-    if (%nickwm iswm %np) {
-      if ($regex(%np,/^(.+?)\.(#.+?)$/)) {
-        echo -s Failure to get file from $regml(1), and requesting the file (pack $regml(2) ) again in 15 seconds.
-        echo -s To cancel this, double click the word "CANCELGET" in the line below. Or type: /cancelget %np
-        echo -sa 4[CANCELGET]7 %np 5-7 %f     5(auto retry in 15sec)
-        beep 1
-        .timer. $+ %np 1 15 msg $regml(1) xdcc get $regml(2) 
-      }
-    }
-  }
-}
-alias cancelget {
-  .timer. $+ $1 off
-  hdel niblget $1
-  echo -a Cancelled retries for $1
-}
-on *:filercvd:*:{
-  var %n = niblget , %f = $nopath($filename) , %nickwm = $nick $+ .*
-  if ($hfind(%n,%f,1).data != $null) {
-    var %np = $v1
-    if (%nickwm iswm %np) {
-      echo -s File recieved.  Removing %np from the watch list.
-      hdel niblget %np
-    }
-  }
-}
-alias stripFluff { return $regsubex($1-,/\.|-|_/g,$chr(32)) }
