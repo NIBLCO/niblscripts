@@ -9,7 +9,7 @@
 ;           To cancel an auto-retry attempt:    /cancelget Botname.#PackNumber
 ;            
 ; Creator:  Hanzo (@Rizon)  /  Rand (@DALnet)  /  Rand#0001 (@Discord)
-; Version:  1.0
+; Version:  1.1
 ;
 ; Requires: The below are already included, but I'm listing them as these were not made by me.  
 ;           See note below as to why I'm including them.
@@ -28,6 +28,7 @@
 ;
 ;        
 ;         Changelog:
+;           1.1 - Added in functionality to < and > buttons, paging now works.
 ;           1.0 - Switched over from using sockets to SReject's JSON for mIRC script.
 ;                 Created a dialog, now you can use a simple interface for searching.
 ;                 This required doing a rewrite for the majority of the code.
@@ -41,7 +42,8 @@
 ;           0.1 - Initial release.
 ;
 ;         TO-DO:
-;           + Add functionality to < and > buttons once the API is updated!
+;           + Add more error checking and clean things up.
+;           + Add in two dropdown boxes for sorting the search results.
 
 
 ;  The Command to open the dialog.
@@ -99,7 +101,7 @@ on *:dialog:niblget:init:*: {
   noop $jsonforeach($json(nibl,content), _addBotsToNIBLGET)
   did -c $dname 5 1
   did -f $dname 7
-
+  did -b $dname 15 | did -b $dname 16
   did -a $dname 7 %niblget.dialog.search
 }
 
@@ -122,6 +124,8 @@ alias _addFilesToNIBLGET {
 ; Click Search button.
 ;
 on *:dialog:niblget:sclick:11: {
+  unset %niblget.dialog.page.*
+  did -b $dname 15 | did -b $dname 16
   var %ctime = $ctime
   did -r niblget 2
   ;14 original id
@@ -132,15 +136,48 @@ on *:dialog:niblget:sclick:11: {
     noop $jsonforeach($json(test,content), _addFilesToNIBLGET)
   }
   else {
-    var %search = $regsubex($did(niblget,7),/([^A-Za-z0-9])/g,% $+ $base($asc(\t),10,16))
-    var %botid
-    if ($did($dname,5) != All && $did($dname,5) != Latest) {
-      var %botid = / $+ $hfind(niblBotList,$did($dname,5)).data
-    }
-    jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ ?query= $+ %search $+ &episodeNumber=-1
-    noop $jsonforeach($json(test,content), _addFilesToNIBLGET)
+    _fetchFilesFromAPI
   }
-  did -a $dname 1 $calc($did($dname,2).lines - 1)) Results in: $duration($calc($ctime - %ctime)) -- Page: 1 / 1 --
+  ;did -a $dname 1 %niblget.dialog.total Results -- Page: $calc( ( %niblget.dialog.offset / %niblget.dialog.max ) + 1 ) / $ceil( $calc( %niblget.dialog.total / %niblget.dialog.max ) ) --
+}
+
+on *:dialog:niblget:sclick:15: {
+  _fetchFilesFromAPI %niblget.dialog.page.previous
+}
+on *:dialog:niblget:sclick:16: {
+  _fetchFilesFromAPI %niblget.dialog.page.next
+}
+
+alias -l _fetchFilesFromAPI {
+  did -r niblget 2
+  did -b $dname 15 | did -b $dname 16
+  var %search = $regsubex($did(niblget,7),/([^A-Za-z0-9])/g,% $+ $base($asc(\t),10,16))
+  var %botid
+  if ($did($dname,5) != All && $did($dname,5) != Latest) {
+    var %botid = / $+ $hfind(niblBotList,$did($dname,5)).data
+  }
+  if ($len($1-) > 0) {
+    jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ /page? $+ $1-
+  }
+  else {
+    jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ /page?query= $+ %search $+ &episodeNumber=-1&page=0&size=15&sort=size&direction=DESC
+  }
+  noop $jsonforeach($json(test,content), _addFilesToNIBLGET)
+  ; Paging
+  set %niblget.dialog.page.previous $json(test,previous).value
+  set %niblget.dialog.page.current $json(test,current).value
+  set %niblget.dialog.page.next $json(test,next).value
+  set %niblget.dialog.total $json(test,total).value
+  set %niblget.dialog.offset $json(test,offset).value
+  set %niblget.dialog.max $json(test,max).value
+
+  if (%niblget.dialog.page.previous) {
+    did -e $dname 15
+  }
+  if (%niblget.dialog.page.next) {
+    did -e $dname 16
+  }
+  did -a $dname 1 %niblget.dialog.total Results -- Page: $calc( ( %niblget.dialog.offset / %niblget.dialog.max ) + 1 ) / $ceil( $calc( %niblget.dialog.total / %niblget.dialog.max ) ) --
 }
 
 
