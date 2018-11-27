@@ -1,5 +1,11 @@
 ; NIBL - Bot search.
 ; This script pulls it's information from NIBL's website.
+;
+; This is an older version of nibl.mrc.  It uses a plain text window
+; inside of mIRC, and does not use a dialog like the newer version does.
+; We're keeping this around for those of you that prefer a more simplistic
+; way to search for files, without any of the extra dependencies that the
+; newer version of nibl.mrc requires.
 ;           
 ;
 ; Usage:    /nibl [-b botname] [search terms]
