@@ -98,7 +98,7 @@ alias nibl {
   if ($$1 == -b) { var %botname = $$2 , %search = $3- }
   else { var %botname = 0, %search = $$1- }
 
-  sockopen %n nibl.co.uk 80
+  sockopen -e %n nibl.co.uk 443
   sockmark %n %botname %search
   if (!$window(@nibl)) { window -aeh -t14,44,58,67,75 @nibl }
   echo -act notice * Loading NIBL results for your search: $iif($1 == -b,$+([,%botname,])) %search
@@ -120,7 +120,7 @@ on *:sockopen:nibl:{
   else {
     %s GET /bots.php?bot= $+ %botname $+ &search= $+ %search HTTP/1.0
   }
-  %s Host: nibl.co.uk
+  %s Host: nibl.co.uk:443
   %s
 }
 
