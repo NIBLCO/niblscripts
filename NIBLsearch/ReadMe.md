@@ -1,4 +1,4 @@
-# NIBL Search (v1.1) 
+# NIBL Search (v1.2) 
 NIBL Search is a script that allows you to search the NIBL bots, without having to open your browser or use the !s command publically in a channel.   
 
 ## Requirements  
