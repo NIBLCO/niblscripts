@@ -8,8 +8,8 @@
 ;           Opens dialog and sets search text:  /nibl some show
 ;           To cancel an auto-retry attempt:    /cancelget Botname.#PackNumber
 ;            
-; Creator:  Hanzo (@Rizon)  /  Rand (@DALnet)  /  Rand#0001 (@Discord)
-; Version:  1.1
+; Creator:  Rand (@Rizon)  /  Rand (@DALnet)  /  Rand#0001 (@Discord)
+; Version:  1.2
 ;
 ; Requires: The below are already included, but I'm listing them as these were not made by me.  
 ;           See note below as to why I'm including them.
@@ -28,6 +28,7 @@
 ;
 ;        
 ;         Changelog:
+;           1.2 - Added in sorting into the GUI.
 ;           1.1 - Added in functionality to < and > buttons, paging now works.
 ;           1.0 - Switched over from using sockets to SReject's JSON for mIRC script.
 ;                 Created a dialog, now you can use a simple interface for searching.
@@ -54,26 +55,29 @@ alias nibl {
 
 ;  The Dialog.
 dialog niblget {
-  title "NIBL Search (v1.0)"
+  title "NIBL Search (v1.2)"
   size -1 -1 812 452
   option pixels
   box "Results:", 1, 4 64 800 351
-  list 2, 16 85 775 292, size extsel
+  list 2, 16 85 775 292,size extsel
   button "Close", 3, 700 419 104 25
   box "Search:", 4, 4 4 800 56
-  combo 5, 492 26 189 234, drop
-  text "Search:", 6, 16 28 42 17
-  edit "", 7, 62 26 250 20
-  text "Bot:", 8, 462 28 26 17
+  combo 5, 522 25 180 234,drop 
+  text "Search:", 6, 16 28 37 13
+  edit "", 7, 62 26 195 20
+  text "Bot:", 8, 462 28 20 13
   button "Get File", 9, 355 380 97 25
-  button "Refresh Bot List", 10, 685 24 104 25
-  button "Search", 11, 314 24 105 25, default
-  check "Trust Bots", 12, 5 423 74 17
-  check "Retry DL if incomplete.", 13, 81 423 136 17
-  text "", 14, 227 425 342 17
+  button "Reload BotList", 10, 707 23 90 25
+  button "Search", 11, 434 23 80 25, default 
+  check "Trust Bots", 12, 6 423 74 17
+  check "Retry DL if incomplete.", 13, 82 423 136 17
+  text "", 14, 227 425 3 13
   button "<", 15, 16 379 65 25
   button ">", 16, 726 379 65 25
+  combo 17,261 25 90 70,drop 
+  combo 18,355 25 70 70,drop
 }
+
 
 
 
@@ -84,7 +88,7 @@ on *:dialog:niblget:init:*: {
   ; MDX Shenanigans so we can have a "ListView" control. (turns List into ListView).
   mdxinit
   mdx SetControlMDX $dname 2 ListView report rowselect grid > $mdx_views
-  ;mdx SetColor $dname 2 background $rgb(100,200,75)
+  mdx SetColor $dname 2 background $rgb(100,200,75)
   did -i $dname 2 1 headerdims 125 500 80 50
   did -i $dname 2 1 headertext Bot Name $chr(9) File $chr(9) Pack $chr(9) Size
   ; Checkmark heckmark the checkboxes if required.
@@ -103,6 +107,14 @@ on *:dialog:niblget:init:*: {
   did -f $dname 7
   did -b $dname 15 | did -b $dname 16
   did -a $dname 7 %niblget.dialog.search
+  did -a $dname 18 ASC
+  did -a $dname 18 DESC
+  did -c $dname 18 1
+  did -a $dname 17 Bot ID
+  did -a $dname 17 File Name
+  did -a $dname 17 Pack Number
+  did -a $dname 17 Size
+  did -c $dname 17 2
 }
 
 
@@ -160,7 +172,9 @@ alias -l _fetchFilesFromAPI {
     jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ /page? $+ $1-
   }
   else {
-    jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ /page?query= $+ %search $+ &episodeNumber=-1&page=0&size=15&sort=size&direction=DESC
+    ;jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ /page?query= $+ %search $+ &episodeNumber=-1&page=0&size=15&sort= $+ $_getSortBy $+ &direction= $+ $_getSortDirection
+    jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ /page?query= $+ %search $+ &episodeNumber=-1&page=0&size=15&sort= $+ $_getSortBy $+ &direction= $+ $_getSortDirection
+
   }
   noop $jsonforeach($json(test,content), _addFilesToNIBLGET)
   ; Paging
@@ -178,6 +192,18 @@ alias -l _fetchFilesFromAPI {
     did -e $dname 16
   }
   did -a $dname 1 %niblget.dialog.total Results -- Page: $calc( ( %niblget.dialog.offset / %niblget.dialog.max ) + 1 ) / $ceil( $calc( %niblget.dialog.total / %niblget.dialog.max ) ) --
+}
+
+alias -l _getSortDirection {
+  return $did(niblget, 18)
+}
+
+alias -l _getSortBy {
+  var %sort = $did(niblget, 17)
+  if (%sort == File Name) { return name }
+  if (%sort == Bot ID) { return botId }
+  if (%sort == Pack Number) { return number }
+  if (%sort == Size) { return sizekbits }
 }
 
 
