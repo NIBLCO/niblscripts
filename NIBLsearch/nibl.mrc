@@ -49,6 +49,11 @@
 
 ;  The Command to open the dialog.
 alias nibl { 
+  ; Tell the user that nibl requires JSONFormIRC if they do not have it.
+  if (!$isalias(json)) {
+    echo -at NIBL Search: /nibl requires JSONFormIRC and MDX.dll, please download the requirements from our github: https://github.com/NIBLCO/niblscripts/tree/master/NIBLsearch - you can use the niblloader.mrc file to load everything.
+    return;
+  }
   set %niblget.dialog.search $1- 
   dialog -m niblget niblget
 }
