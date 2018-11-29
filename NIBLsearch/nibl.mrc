@@ -44,7 +44,6 @@
 ;
 ;         TO-DO:
 ;           + Add more error checking and clean things up.
-;           + Add in two dropdown boxes for sorting the search results.
 
 
 ;  The Command to open the dialog.
