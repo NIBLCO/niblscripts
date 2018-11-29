@@ -106,7 +106,7 @@ on *:dialog:niblget:init:*: {
     did -c $dname 13
   }
   ; Use the JSON For mIRC script to pull the bots.
-  jsonopen -du nibl https://api.nibl.co.uk:8080/nibl/bots
+  jsonopen -du nibl https://api.nibl.co.uk/nibl/bots
   noop $jsonforeach($json(nibl,content), _addBotsToNIBLGET)
   did -c $dname 5 1
   did -f $dname 7
@@ -149,7 +149,7 @@ on *:dialog:niblget:sclick:11: {
   did -a $dname 1 "Searching..."
   ; Check to see if we are searching for the Latest Packs, or if it's a normal search.
   if ($did($dname,5) == Latest Packs) {
-    jsonopen -du test https://api.nibl.co.uk:8080/nibl/latest?size=50
+    jsonopen -du test https://api.nibl.co.uk/nibl/latest?size=50
     noop $jsonforeach($json(test,content), _addFilesToNIBLGET)
   }
   else {
@@ -174,11 +174,10 @@ alias -l _fetchFilesFromAPI {
     var %botid = / $+ $hfind(niblBotList,$did($dname,5)).data
   }
   if ($len($1-) > 0) {
-    jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ /page? $+ $1-
+    jsonopen -du test https://api.nibl.co.uk/nibl/search $+ %botid $+ /page? $+ $1-
   }
   else {
-    ;jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ /page?query= $+ %search $+ &episodeNumber=-1&page=0&size=15&sort= $+ $_getSortBy $+ &direction= $+ $_getSortDirection
-    jsonopen -du test https://api.nibl.co.uk:8080/nibl/search $+ %botid $+ /page?query= $+ %search $+ &episodeNumber=-1&page=0&size=15&sort= $+ $_getSortBy $+ &direction= $+ $_getSortDirection
+    jsonopen -du test https://api.nibl.co.uk/nibl/search $+ %botid $+ /page?query= $+ %search $+ &episodeNumber=-1&page=0&size=15&sort= $+ $_getSortBy $+ &direction= $+ $_getSortDirection
 
   }
   noop $jsonforeach($json(test,content), _addFilesToNIBLGET)
